@@ -31,7 +31,7 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
         </label>
       </div>
       <Button className='ml-auto' variant='ghost' size='icon'>
-        <Trash2 className='h-4 w-4 text-muted' />
+        <Trash2 className='h-4 w-4 text-muted-foreground' />
         {/* Pour l'instant, le bouton ne fait rien. On le fera à l'étape 5. */}
       </Button>
     </div>
