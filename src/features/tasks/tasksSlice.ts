@@ -42,10 +42,11 @@ const tasksSlice = createSlice({
   reducers: {
     // Reducer pour ajouter une tâche.
     // `PayloadAction<string>` signifie que l'action attendra une charge utile (payload) de type string (le titre de la tâche).
-    addTask: (state, action: PayloadAction<string>) => {
+    addTask: (state, { payload }: PayloadAction<{ title: string }>) => {
+      const { title } = payload;
       const newTask = {
         id: Date.now(), // ID unique
-        title: action.payload,
+        title,
         completed: false,
       };
       // Grâce à Immer (inclus dans RTK), on peut écrire du code qui "mute" l'état.
@@ -55,21 +56,24 @@ const tasksSlice = createSlice({
     },
     // Reducer pour basculer l'état d'une tâche.
     // `PayloadAction<number>` signifie que l'action attendra une charge utile (payload) de type number (l'ID de la tâche).
-    toggleTask: (state, action: PayloadAction<number>) => {
-      const task = state.tasks.find((task) => task.id === action.payload);
+    toggleTask: (state, { payload }: PayloadAction<{ id: number }>) => {
+      const { id } = payload;
+      const task = state.tasks.find((task) => task.id === id);
       if (task) {
         task.completed = !task.completed;
       }
     },
     // Reducer pour supprimer une tâche.
     // Il attend aussi l'ID de la tâche en payload.
-    deleteTask: (state, action: PayloadAction<number>) => {
-      state.tasks = state.tasks.filter((task) => task.id !== action.payload);
+    deleteTask: (state, { payload }: PayloadAction<{ id: number }>) => {
+      const { id } = payload;
+      state.tasks = state.tasks.filter((task) => task.id !== id);
     },
-    editTask: (state, action) => {
-      const task = state.tasks.find((task) => task.id === action.payload.id);
+    editTask: (state, { payload }: PayloadAction<{ id: number; title: string }>) => {
+      const { id, title } = payload;
+      const task = state.tasks.find((task) => task.id === id);
       if (task) {
-        task.title = action.payload.title;
+        task.title = title;
       }
     },
   },
