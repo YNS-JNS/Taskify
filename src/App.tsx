@@ -1,10 +1,20 @@
-import { Button } from '@/components/ui/button';
+// src/App.tsx
+
+import TaskList from './components/TaskList';
+import AddTaskForm from './components/AddTaskForm'; // Import the new component
 
 function App() {
   return (
-    <div className='flex min-h-svh flex-col items-center justify-center'>
-      <Button>Click me</Button>
-    </div>
+    <main className="min-h-screen bg-background text-foreground flex flex-col items-center p-8">
+      <div className="w-full max-w-md space-y-8">
+        <h1 className="text-3xl font-bold text-center">Taskify</h1>
+        
+        {/* Add the form component here */}
+        <AddTaskForm /> 
+
+        <TaskList />
+      </div>
+    </main>
   );
 }
 
