@@ -1,62 +1,65 @@
-import { deleteTask, editTask, toggleTask, type Task } from '@/features/tasks/tasksSlice'; // On importe notre type Task
+// src/components/TaskItem.tsx
+
+import { type Task, toggleTask, deleteTask, editTask } from '@/features/tasks/tasksSlice';
+import { useAppDispatch } from '@/app/hooks';
+import { useState, useRef, useEffect, FC } from 'react';
+
 import { Checkbox } from './ui/checkbox';
 import { Button } from './ui/button';
-import { Trash2 } from 'lucide-react';
-import { useAppDispatch } from '@/app/hooks';
-import { useEffect, useRef, useState } from 'react';
 import { Input } from './ui/input';
+import { Trash2 } from 'lucide-react';
 
-// Zoom sur TypeScript : Définir les props d'un composant.
-// On crée une interface pour décrire les "props" que notre composant attend.
-// Ici, TaskItem DOIT recevoir une prop `task` qui est de type `Task`.
+/**
+ * @interface TaskItemProps
+ * @description Définit les propriétés (props) attendues par le composant TaskItem.
+ * Il doit recevoir un objet `task` qui correspond à notre interface `Task`.
+ */
 interface TaskItemProps {
-  task : Task
+  task: Task;
 }
 
-// `React.FC` (Function Component) est un type générique qui nous aide à typer
-// nos composants fonctionnels. En lui passant `<TaskItemProps>`, on s'assure
-// que les props reçues par le composant sont bien conformes à notre interface.
-const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
+/**
+ * @component TaskItem
+ * @description Un composant pour afficher une seule tâche.
+ * Il gère son propre état pour le mode édition et dispatche les actions
+ * Redux pour modifier, basculer ou supprimer la tâche.
+ */
+const TaskItem: FC<TaskItemProps> = ({ task }) => {
+  // On déstructure les props de la tâche pour un accès plus facile.
   const { id, title, completed } = task;
 
-  // État local pour gérer le mode édition
-  const [isEditing, setIsEditing] = useState(false);
-
-  // État local pour stocker la valeur de l'input pendant l'édition
-  const [newTitle, setNewTitle] = useState(title);
-
-  // Une ref pour pouvoir "focuser" l'input dès qu'il apparaît
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // Get the dispatch function, just like in the AddTaskForm
+  // Récupération de la fonction `dispatch` du store Redux via notre hook typé.
   const dispatch = useAppDispatch();
 
-  // Handler for toggling the checkbox
-  const handleToggle = () => {
-    // Dispatch the `toggleTask` action, passing the task's ID as the payload.
-    // TypeScript knows that `toggleTask` expects a `number` as its payload
-    // because we defined it with `PayloadAction<number>` in our slice.
-    dispatch(toggleTask({ id }));
-  };
+  // --- États locaux pour la gestion de l'UI ---
+  // `isEditing` est un booléen qui détermine si on affiche le label ou le champ de saisie.
+  const [isEditing, setIsEditing] = useState(false);
+  // `newTitle` stocke la valeur actuelle du champ de saisie pendant l'édition.
+  const [newTitle, setNewTitle] = useState(title);
 
-  // Handler for clicking the delete button
-  const handleDelete = () => {
-    // Dispatch the `deleteTask` action, also with the task's ID.
-    dispatch(deleteTask({ id }));
-  };
+  // `useRef` nous donne un accès direct à l'élément <input> du DOM.
+  // Utile pour des opérations impératives comme `.focus()`.
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  // Fonction pour gérer la soumission de la modification
+  // --- Gestionnaires d'événements ---
+  const handleToggle = () => dispatch(toggleTask({ id }));
+  const handleDelete = () => dispatch(deleteTask({ id }));
+
+  // Gère la soumission de l'édition.
   const handleEdit = () => {
-    // On ne sauvegarde que si le titre a changé et n'est pas vide
-    if (newTitle.trim() && newTitle.trim() !== task.title) {
+    // On dispatche l'action uniquement si le titre a changé et n'est pas vide.
+    if (newTitle.trim() && newTitle.trim() !== title) {
       dispatch(editTask({ id: id, title: newTitle.trim() }));
     }
-    // On quitte le mode édition dans tous les cas
+    // On sort toujours du mode édition après une tentative de sauvegarde.
     setIsEditing(false);
   };
 
-  // Hook pour focuser l'input quand on passe en mode édition
+  // --- Effet de bord pour l'ergonomie ---
+  // Ce `useEffect` s'exécute chaque fois que `isEditing` change.
   useEffect(() => {
+    // Si on entre en mode édition, on met automatiquement le focus sur l'input.
+    // L'effet s'exécute APRÈS que React a mis à jour le DOM, garantissant que `inputRef.current` existe.
     if (isEditing) {
       inputRef.current?.focus();
     }
@@ -64,53 +67,48 @@ const TaskItem: React.FC<TaskItemProps> = ({ task }) => {
 
   return (
     <div className='flex items-center justify-between p-3 border-b'>
-      <div className='flex items-center gap-3'>
-        <Checkbox
-          id={`task-${id}`}
-          checked={completed}
-          // The `onCheckedChange` prop is the correct event handler for Shadcn's Checkbox.
-          // It gets called whenever the checked state changes.
-          onCheckedChange={handleToggle}
-        />
-        {/* Affichage conditionnel : soit le label, soit l'input */}
+      <div className='flex items-center gap-3 flex-grow mr-2'>
+        <Checkbox id={`task-${id}`} checked={completed} onCheckedChange={handleToggle} />
+
+        {/* Rendu conditionnel : on affiche l'input si `isEditing` est true, sinon le label. */}
         {isEditing ? (
           <Input
             ref={inputRef}
             value={newTitle}
             onChange={(e) => setNewTitle(e.target.value)}
-            // handleEdit est appelé quand on clique en dehors (onBlur)
+            // `onBlur` se déclenche quand l'élément perd le focus (clic à l'extérieur).
             onBlur={handleEdit}
-            // ou quand on appuie sur Entrée (onKeyDown)
+            // `onKeyDown` permet de gérer les pressions de touches.
             onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleEdit();
-              } else if (e.key === 'Escape') {
-                // Optionnel : annuler avec la touche Échap
-                setNewTitle(task.title);
-                setIsEditing(false);
+              if (e.key === 'Enter') handleEdit(); // Sauvegarde avec Entrée
+              if (e.key === 'Escape') {
+                // Annule avec Échap
+                setNewTitle(title); // Réinitialise le titre
+                setIsEditing(false); // Quitte le mode édition
               }
             }}
             className='h-8'
           />
         ) : (
           <label
-              // On active le mode édition au double-clic
-              onDoubleClick={() => setIsEditing(true)}
             htmlFor={`task-${id}`}
-            // We make the label clickable to also toggle the checkbox
-            onClick={handleToggle}
-            className={`text-sm font-medium leading-none ${
+            // Passer en mode édition au double-clic.
+            onDoubleClick={() => setIsEditing(true)}
+            className={`text-sm font-medium leading-none cursor-pointer ${
               completed ? 'line-through text-muted-foreground' : ''
             }`}
-            // Pour l'instant, on ne gère pas le changement. On le fera à l'étape 5.
           >
             {title}
           </label>
         )}
       </div>
-      <Button className='ml-auto' variant='ghost' size='icon' onClick={handleDelete}>
+      <Button
+        variant='ghost'
+        size='icon'
+        onClick={handleDelete}
+        aria-label={`Delete task: ${title}`}
+      >
         <Trash2 className='h-4 w-4 text-muted-foreground' />
-        {/* Pour l'instant, le bouton ne fait rien. On le fera à l'étape 5. */}
       </Button>
     </div>
   );

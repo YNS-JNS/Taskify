@@ -2,24 +2,29 @@ import { createSlice } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import type { RootState } from '@/app/store';
 
-// On définit l'interface TypeScript pour une seule tâche.
-// C'est la même que dans l'exemple précédent.
+/**
+ * @interface Task
+ * @description Définit la structure de données pour un seul objet Tâche.
+ * En utilisant une interface, nous assurons que chaque tâche dans notre application
+ * aura toujours ces trois propriétés avec les bons types.
+ */
 export interface Task {
   id: number;
   title: string;
   completed: boolean;
 }
 
-// On définit l'interface pour l'état de notre slice.
-// On utilise `Task[]` pour indiquer que `tasks` est un tableau de tâches.
-// `tasks` est initialisé comme un tableau vide.
+/**
+ * @interface TasksState
+ * @description Définit la forme de l'état pour cette "slice" (tranche) spécifique.
+ * Notre état contient une seule propriété, `tasks`, qui est un tableau d'objets `Task`.
+ */
 interface TasksState {
   tasks: Task[];
 }
 
-// On définit l'état initial de notre slice.
-// Au début, on a quelques tâches pour l'exemple.
-
+// L'état initial de notre slice. Il est de type `TasksState`.
+// Nous le remplissons avec quelques données pour que l'application ne soit pas vide au démarrage.
 const initialState: TasksState = {
   tasks: [
     { id: 1, title: 'Learn Redux', completed: true },
@@ -28,49 +33,66 @@ const initialState: TasksState = {
   ],
 };
 
-// On définit notre slice.
-// `createSlice` est une fonction fournie par Redux Toolkit qui crée automatiquement
-// les actions et les reducers pour nous.
-// On lui passe un objet avec les propriétés suivantes :
-// - `name`: Le nom de notre slice.
-// - `initialState`: L'état initial de notre slice.
-// - `reducers`: Un objet contenant les différentes actions que nous voulons gérer.
+/**
+ * createSlice est le cœur de Redux Toolkit pour la gestion d'état.
+ * Il accepte un état initial, un objet de "reducers", et un nom de slice,
+ * et génère automatiquement les créateurs d'actions et le reducer principal pour cette slice.
+ */
 const tasksSlice = createSlice({
-  name: 'tasks', // Nom de la slice, utilisé dans les types d'actions
-  initialState, // L'état de départ
-  // Les `reducers` sont des fonctions qui décrivent comment l'état peut être modifié.
+  // `name` est un identifiant pour cette slice. Il est utilisé pour préfixer les types d'actions générées
+  // (par exemple, 'tasks/addTask').
+  name: 'tasks',
+
+  // `initialState` est l'état que cette slice aura au chargement de l'application.
+  initialState,
+
+  // `reducers` est un objet où chaque clé est le nom d'une action, et la valeur est la fonction
+  // (le "reducer") qui met à jour l'état en réponse à cette action.
   reducers: {
-    // Reducer pour ajouter une tâche.
-    // `PayloadAction<string>` signifie que l'action attendra une charge utile (payload) de type string (le titre de la tâche).
-    addTask: (state, { payload }: PayloadAction<{ title: string }>) => {
-      const { title } = payload;
-      const newTask = {
-        id: Date.now(), // ID unique
+    /**
+     * Ajoute une nouvelle tâche à la liste.
+     * @param state - L'état actuel de la slice. RTK (avec Immer) nous permet de le "muter" directement.
+     * @param action - L'objet action. `payload` contient les données passées lors du dispatch.
+     *                 On type le payload comme `{ title: string }` pour être explicite et scalable.
+     */
+    addTask: (state, action: PayloadAction<{ title: string }>) => {
+      const { title } = action.payload;
+      const newTask: Task = {
+        id: Date.now(), // Utilisation de Date.now() pour un ID unique simple (non recommandé en production)
         title,
         completed: false,
       };
-      // Grâce à Immer (inclus dans RTK), on peut écrire du code qui "mute" l'état.
-      // En réalité, Immer crée une copie pour nous en arrière-plan.
-      // C'est beaucoup plus simple que de faire `...state` manuellement.
       state.tasks.push(newTask);
     },
-    // Reducer pour basculer l'état d'une tâche.
-    // `PayloadAction<number>` signifie que l'action attendra une charge utile (payload) de type number (l'ID de la tâche).
-    toggleTask: (state, { payload }: PayloadAction<{ id: number }>) => {
-      const { id } = payload;
+
+    /**
+     * Inverse l'état `completed` d'une tâche existante.
+     * @param payload - Un objet contenant l' `id` de la tâche à modifier.
+     */
+    toggleTask: (state, action: PayloadAction<{ id: number }>) => {
+      const { id } = action.payload;
       const task = state.tasks.find((task) => task.id === id);
       if (task) {
         task.completed = !task.completed;
       }
     },
-    // Reducer pour supprimer une tâche.
-    // Il attend aussi l'ID de la tâche en payload.
-    deleteTask: (state, { payload }: PayloadAction<{ id: number }>) => {
-      const { id } = payload;
+
+    /**
+     * Supprime une tâche de la liste.
+     * @param payload - Un objet contenant l' `id` de la tâche à supprimer.
+     */
+    deleteTask: (state, action: PayloadAction<{ id: number }>) => {
+      const { id } = action.payload;
+      // `.filter()` retourne un nouveau tableau, ce qui est une manière immuable de mettre à jour l'état.
       state.tasks = state.tasks.filter((task) => task.id !== id);
     },
-    editTask: (state, { payload }: PayloadAction<{ id: number; title: string }>) => {
-      const { id, title } = payload;
+
+    /**
+     * Modifie le titre d'une tâche existante.
+     * @param payload - Un objet contenant l' `id` de la tâche et son nouveau `title`.
+     */
+    editTask: (state, action: PayloadAction<{ id: number; title: string }>) => {
+      const { id, title } = action.payload;
       const task = state.tasks.find((task) => task.id === id);
       if (task) {
         task.title = title;
@@ -79,29 +101,14 @@ const tasksSlice = createSlice({
   },
 });
 
-// RTK génère automatiquement des "Action Creators" pour chaque reducer.
-// On les exporte pour pouvoir les utiliser dans nos composants (via `dispatch`).
+// `tasksSlice.actions` est un objet où RTK a automatiquement créé des fonctions "action creator"
+// pour chaque reducer que nous avons défini. On les exporte pour les utiliser dans nos composants.
 export const { addTask, toggleTask, deleteTask, editTask } = tasksSlice.actions;
 
-// On crée un "sélecteur" pour facilement récupérer la liste des tâches depuis n'importe quel composant.
-// `state: RootState` est typé pour que TypeScript connaisse la forme de notre état global.
+// Un "sélecteur" est une fonction qui extrait des données de l'état global.
+// C'est une bonne pratique pour découpler les composants de la structure exacte de l'état.
 export const selectTasks = (state: RootState) => state.tasks.tasks;
 
-// On exporte le reducer généré par la slice.
-// C'est ce que le store utilisera.
+// On exporte le reducer complet généré par `createSlice`.
+// Ce reducer sera combiné avec d'autres dans le store principal.
 export default tasksSlice.reducer;
-
-/* 
-###############################################################################
- Explication :
- . PayloadAction<T> : C'est un type de RTK très utile. Utilisez-le pour typer la charge utile (payload) de vos actions. 
- Cela vous assure de ne jamais dispatcher une action avec le mauvais type de données.
- 
- . Sélecteurs : Créer des fonctions select... comme selectTasks est une bonne pratique. 
- Si un jour la structure de votre état change (ex: state.tasks.allTasks), vous n'aurez qu'à modifier le sélecteur à un seul endroit, au lieu de changer tous les composants qui l'utilisent.
-
- . Organisation par "feature" : Mettre tout ce qui concerne les tâches (slice, composants, etc.) 
- dans un dossier src/features/tasks est une façon très populaire et scalable d'organiser les applications Redux
-
-############################################################################### 
-*/
