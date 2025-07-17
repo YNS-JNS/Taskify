@@ -22,7 +22,7 @@ const AddTaskForm = () => {
       // This is the key part: we call `dispatch` and pass it the result
       // of our action creator `addTask`.
       // `addTask(title)` creates an action object like: { type: 'tasks/addTask', payload: 'The new task title' }
-      dispatch(addTask(title.trim()));
+      dispatch(addTask({ title: title.trim() }));
 
       // Clear the input field after submitting.
       setTitle('');
